@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { TagsModule } from './modules/tags/tags.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     // Feature modules
     AuthModule,
     UsersModule,
+    TagsModule,
   ],
   providers: [
     // Global guards - Applied to all routes by default
