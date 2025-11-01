@@ -12,6 +12,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ActionsModule } from './modules/actions/actions.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
     AuditModule,
     ActionsModule,
     TasksModule,
+    WebhooksModule,
   ],
   providers: [
     // Global guards - Applied to all routes by default
