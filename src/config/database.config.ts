@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { MongooseModuleOptions } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 
 export const getDatabaseConfig = (
   configService: ConfigService,
@@ -13,13 +14,13 @@ export const getDatabaseConfig = (
     uri,
     retryAttempts: 3,
     retryDelay: 1000,
-    connectionFactory: (connection) => {
+    connectionFactory: (connection: Connection) => {
       connection.on('connected', () => {
         console.log('✅ MongoDB connected successfully');
         console.log(`📦 Database: ${uri}`);
       });
 
-      connection.on('error', (error) => {
+      connection.on('error', (error: Error) => {
         console.error('❌ MongoDB connection error:', error);
       });
 

@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
-
+import morgan from 'morgan';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -13,6 +13,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.use(morgan('dev'));
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
