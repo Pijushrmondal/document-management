@@ -10,6 +10,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { TagsModule } from './modules/tags/tags.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { ActionsModule } from './modules/actions/actions.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AuditModule } from './modules/audit/audit.module';
     TagsModule,
     DocumentsModule,
     AuditModule,
+    ActionsModule,
   ],
   providers: [
     // Global guards - Applied to all routes by default
