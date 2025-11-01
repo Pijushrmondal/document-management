@@ -1,0 +1,115 @@
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { CreateAuditLogDto } from './dto/create-audit-log.dto';
+import { AuditQueryDto } from './dto/audit-query.dto';
+import {
+  AuditLog,
+  AuditLogDocument,
+} from 'src/database/schemas/audit-log.schema';
+
+@Injectable()
+export class AuditRepository {
+  constructor(
+    @InjectModel(AuditLog.name)
+    private auditLogModel: Model<AuditLogDocument>,
+  ) {}
+
+  async create(createDto: CreateAuditLogDto): Promise<AuditLogDocument> {
+    const auditLog = new this.auditLogModel({
+      ...createDto,
+      userId: new Types.ObjectId(createDto.userId),
+      timestamp: new Date(),
+    });
+    return auditLog.save();
+  }
+
+  async findAll(
+    query: AuditQueryDto,
+  ): Promise<{ logs: AuditLogDocument[]; total: number }> {
+    const filter: any = {};
+
+    if (query.userId) {
+      filter.userId = new Types.ObjectId(query.userId);
+    }
+
+    if (query.action) {
+      filter.action = query.action;
+    }
+
+    if (query.entityType) {
+      filter.entityType = query.entityType;
+    }
+
+    if (query.from || query.to) {
+      filter.timestamp = {};
+      if (query.from) {
+        filter.timestamp.$gte = new Date(query.from);
+      }
+      if (query.to) {
+        filter.timestamp.$lte = new Date(query.to);
+      }
+    }
+
+    const [logs, total] = await Promise.all([
+      this.auditLogModel
+        .find(filter)
+        .sort({ timestamp: -1 })
+        .skip(query.offset || 0)
+        .limit(query.limit || 50)
+        .exec(),
+      this.auditLogModel.countDocuments(filter).exec(),
+    ]);
+
+    return { logs, total };
+  }
+
+  async findByUserId(
+    userId: string,
+    limit: number = 50,
+  ): Promise<AuditLogDocument[]> {
+    return this.auditLogModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .exec();
+  }
+
+  async findByAction(
+    action: string,
+    limit: number = 50,
+  ): Promise<AuditLogDocument[]> {
+    return this.auditLogModel
+      .find({ action })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .exec();
+  }
+
+  async findByEntity(
+    entityType: string,
+    entityId: string,
+  ): Promise<AuditLogDocument[]> {
+    return this.auditLogModel
+      .find({ entityType, entityId })
+      .sort({ timestamp: -1 })
+      .exec();
+  }
+
+  async countByAction(action: string): Promise<number> {
+    return this.auditLogModel.countDocuments({ action }).exec();
+  }
+
+  async countByUser(userId: string): Promise<number> {
+    return this.auditLogModel
+      .countDocuments({ userId: new Types.ObjectId(userId) })
+      .exec();
+  }
+
+  async deleteOlderThan(date: Date): Promise<number> {
+    const result = await this.auditLogModel
+      .deleteMany({ timestamp: { $lt: date } })
+      .exec();
+    return result.deletedCount;
+  }
+}
