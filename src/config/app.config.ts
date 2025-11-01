@@ -27,16 +27,11 @@ export default (): Config => ({
     corsOrigin: process.env.CORS_ORIGIN || '*',
   },
   database: {
-    uri:
-      process.env.MONGODB_URI || 'mongodb://localhost:27017/backend-assignment',
-    testUri:
-      process.env.MONGODB_TEST_URI ||
-      'mongodb://localhost:27017/backend-assignment-test',
+    uri: process.env.MONGODB_URI || '',
+    testUri: process.env.MONGODB_TEST_URI || '',
   },
   jwt: {
-    secret:
-      process.env.JWT_SECRET ||
-      'your-super-secret-jwt-key-change-this-in-production',
+    secret: process.env.JWT_SECRET || '',
     expiresIn: process.env.JWT_EXPIRATION || '24h',
   },
 });

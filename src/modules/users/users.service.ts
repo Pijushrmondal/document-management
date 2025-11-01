@@ -1,3 +1,4 @@
+import { UserDocument } from './../../database/schemas/user.schema';
 import {
   Injectable,
   NotFoundException,
@@ -6,7 +7,6 @@ import {
 import { UsersRepository } from './users.repository';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { UserDocument } from 'src/database/schemas/user.schema';
 
 @Injectable()
 export class UsersService {

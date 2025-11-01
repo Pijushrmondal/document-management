@@ -1,8 +1,9 @@
-import { UserRole } from '@/common/enum/user-role.enum';
+import { BaseDocument } from './../../common/types/mongoose.types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { UserRole } from '@/common/enum/user-role.enum';
 
-export type UserDocument = User & Document;
+export type UserDocument = User & Document & BaseDocument;
 
 @Schema({ timestamps: true })
 export class User {
@@ -11,12 +12,6 @@ export class User {
 
   @Prop({ required: true, enum: UserRole, default: UserRole.USER })
   role: UserRole;
-
-  @Prop()
-  createdAt: Date;
-
-  @Prop()
-  updatedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

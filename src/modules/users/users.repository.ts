@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+
 import { CreateUserDto } from './dto/create-user.dto';
 import { User, UserDocument } from 'src/database/schemas/user.schema';
 
@@ -31,5 +32,12 @@ export class UsersRepository {
 
   async count(): Promise<number> {
     return this.userModel.countDocuments().exec();
+  }
+
+  async existsByEmail(email: string): Promise<boolean> {
+    const count = await this.userModel
+      .countDocuments({ email: email.toLowerCase() })
+      .exec();
+    return count > 0;
   }
 }
