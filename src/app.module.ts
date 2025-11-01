@@ -11,6 +11,7 @@ import { TagsModule } from './modules/tags/tags.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ActionsModule } from './modules/actions/actions.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ActionsModule } from './modules/actions/actions.module';
     DocumentsModule,
     AuditModule,
     ActionsModule,
+    TasksModule,
   ],
   providers: [
     // Global guards - Applied to all routes by default
