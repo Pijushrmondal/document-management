@@ -3,9 +3,18 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import morgan from 'morgan';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // ✅ Enable CORS for all origins
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: '*',
+  });
+
+  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -14,8 +23,10 @@ async function bootstrap() {
     }),
   );
 
+  // HTTP request logger
   app.use(morgan('dev'));
 
+  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
     .setDescription('NestJS API with MongoDB')
@@ -26,12 +37,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(
-    `🚀 Application is running on: http://localhost:${process.env.PORT ?? 3000}`,
-  );
-  console.log(
-    `📘 Swagger docs: http://localhost:${process.env.PORT ?? 3000}/api-docs`,
-  );
+  const port = process.env.PORT ?? 3000;
+
+  await app.listen(port);
+
+  console.log(`🚀 Application is running on: http://localhost:${port}`);
+  console.log(`📘 Swagger docs: http://localhost:${port}/api-docs`);
 }
+
 bootstrap();
