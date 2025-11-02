@@ -55,12 +55,12 @@ export class TagsController {
 
   // ==================== Folder Endpoints ====================
 
-  //   @Get('folders')
-  //   async getFolders(
-  //     @CurrentUser('sub') userId: string,
-  //   ): Promise<FolderResponseDto[]> {
-  //     return this.tagsService.getFolders(userId);
-  //   }
+  @Get('folders')
+  async getFolders(
+    @CurrentUser('sub') userId: string,
+  ): Promise<FolderResponseDto[]> {
+    return this.tagsService.getFolders(userId);
+  }
 
   @Get('folders/:name/docs')
   async getDocumentsByFolder(

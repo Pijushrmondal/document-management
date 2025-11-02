@@ -190,17 +190,16 @@ export class TagsService {
 
   // ==================== Folder Operations ====================
 
-  //   async getFolders(userId: string): Promise<FolderResponseDto[]> {
-  //     const foldersWithCounts =
-  //       await this.tagsRepository.getFoldersWithCounts(userId);
-
-  //     return foldersWithCounts.map(({ tag, documentCount }) => ({
-  //       id: tag._id.toString(),
-  //       name: tag.name,
-  //       documentCount,
-  //       createdAt: tag.createdAt,
-  //     }));
-  //   }
+  async getFolders(userId: string): Promise<FolderResponseDto[]> {
+    const foldersWithCounts =
+      await this.tagsRepository.getFoldersWithCounts(userId);
+    return foldersWithCounts.map(({ tag, documentCount }) => ({
+      id: tag._id.toString(),
+      name: tag.name,
+      documentCount,
+      createdAt: tag.createdAt,
+    }));
+  }
 
   async getDocumentsByFolder(
     folderName: string,

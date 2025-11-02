@@ -173,26 +173,23 @@ export class TagsRepository {
 
   // ==================== Folder Operations ====================
 
-  //   async getFoldersWithCounts(ownerId: string): Promise
-  //     Array<{
-  //       tag: TagDocument;
-  //       documentCount: number;
-  //     }>
-  //   > {
-  //     const tags = await this.findTagsByOwner(ownerId);
+  async getFoldersWithCounts(
+    ownerId: string,
+  ): Promise<Array<{ tag: TagDocument; documentCount: number }>> {
+    const tags = await this.findTagsByOwner(ownerId);
 
-  //     const foldersWithCounts = await Promise.all(
-  //       tags.map(async (tag) => {
-  //         const documentCount = await this.countDocumentsByTag(
-  //           tag._id.toString(),
-  //         );
-  //         return {
-  //           tag,
-  //           documentCount,
-  //         };
-  //       }),
-  //     );
+    const foldersWithCounts = await Promise.all(
+      tags.map(async (tag) => {
+        const documentCount = await this.countDocumentsByTag(
+          tag._id.toString(),
+        );
+        return {
+          tag,
+          documentCount,
+        };
+      }),
+    );
 
-  //     return foldersWithCounts.filter((folder) => folder.documentCount > 0);
-  //   }
+    return foldersWithCounts.filter((folder) => folder.documentCount > 0);
+  }
 }
