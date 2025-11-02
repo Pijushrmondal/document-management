@@ -96,14 +96,14 @@ export class DocumentsRepository {
 
   async searchFullTextInDocuments(
     query: string,
-    documentIds: string[],
+    documentIds: any[],
     ownerId: string,
   ): Promise<DocumentDocument[]> {
     return this.documentModel
       .find(
         {
           $text: { $search: query },
-          _id: { $in: documentIds.map((id) => new Types.ObjectId(id)) },
+          _id: { $in: documentIds.map(({ _id }) => new Types.ObjectId(_id)) },
           ownerId: new Types.ObjectId(ownerId),
         },
         { score: { $meta: 'textScore' } },

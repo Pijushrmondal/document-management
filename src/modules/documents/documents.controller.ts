@@ -55,10 +55,10 @@ export class DocumentsController {
     return this.documentsService.findAll(userId, query.page, query.limit);
   }
 
-  @Get('search')
+  @Post('search')
   async searchDocuments(
     @CurrentUser('sub') userId: string,
-    @Query() searchDto: SearchDocumentDto,
+    @Body() searchDto: SearchDocumentDto,
   ): Promise<{ results: DocumentResponseDto[]; total: number }> {
     const results = await this.documentsService.searchDocuments(
       userId,

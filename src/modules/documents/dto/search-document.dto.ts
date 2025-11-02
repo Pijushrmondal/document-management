@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   IsEnum,
   IsArray,
-  IsOptional,
   ValidateIf,
   ArrayMinSize,
 } from 'class-validator';
@@ -16,7 +15,7 @@ export enum SearchScope {
 export class SearchDocumentDto {
   @IsString()
   @IsNotEmpty()
-  q: string; // search query
+  q: string;
 
   @IsEnum(SearchScope)
   scope: SearchScope;
@@ -27,5 +26,5 @@ export class SearchDocumentDto {
   @ValidateIf(
     (o) => o.scope === SearchScope.FOLDER || o.scope === SearchScope.FILES,
   )
-  ids: string[]; // folder name OR file IDs based on scope
+  ids: string[];
 }

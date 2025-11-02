@@ -8,7 +8,12 @@ export type DocumentTagDocument = DocumentTag & Document & BaseDocument;
 export class DocumentTag {
   _id: Types.ObjectId;
 
-  @Prop({ required: true, type: Types.ObjectId, ref: 'Document', index: true })
+  @Prop({
+    required: true,
+    type: Types.ObjectId,
+    ref: 'DocumentModel',
+    index: true,
+  })
   documentId: Types.ObjectId;
 
   @Prop({ required: true, type: Types.ObjectId, ref: 'Tag', index: true })
