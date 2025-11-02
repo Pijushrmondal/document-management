@@ -19,16 +19,13 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class ActionsController {
   constructor(private readonly actionsService: ActionsService) {}
 
-  /**
-   * Run a scoped action
-   */
-  //   @Post('run')
-  //   async runAction(
-  //     @CurrentUser('sub') userId: string,
-  //     @Body() runActionDto: RunActionDto,
-  //   ): Promise<ActionResponseDto> {
-  //     return this.actionsService.runAction(userId, runActionDto);
-  //   }
+  @Post('run')
+  async runAction(
+    @CurrentUser('sub') userId: string,
+    @Body() runActionDto: RunActionDto,
+  ): Promise<ActionResponseDto> {
+    return this.actionsService.runAction(userId, runActionDto);
+  }
 
   /**
    * Get action by ID

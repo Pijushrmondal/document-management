@@ -17,6 +17,7 @@ import {
   ActionDocument,
   ActionStatus,
 } from 'src/database/schemas/action.schema';
+import mongoose from 'mongoose';
 
 @Injectable()
 export class ActionsService {
@@ -33,108 +34,108 @@ export class ActionsService {
   /**
    * Run a scoped action
    */
-  //   async runAction(
-  //     userId: string,
-  //     runActionDto: RunActionDto,
-  //   ): Promise<ActionResponseDto> {
-  //     // 1. Validate scope (folder XOR files)
-  //     this.validateScope(runActionDto.scope);
+  async runAction(
+    userId: string,
+    runActionDto: RunActionDto,
+  ): Promise<ActionResponseDto> {
+    // 1. Validate scope (folder XOR files)
+    this.validateScope(runActionDto.scope);
 
-  //     // 2. Create action record
-  //     const action = await this.actionsRepository.createAction({
-  //       userId,
-  //       status: ActionStatus.PENDING,
-  //       scope: runActionDto.scope,
-  //       messages: runActionDto.messages,
-  //       actions: runActionDto.actions,
-  //       creditsUsed: this.CREDITS_PER_ACTION,
-  //     });
+    // 2. Create action record
+    const action = await this.actionsRepository.createAction({
+      userId: new mongoose.Types.ObjectId(userId),
+      status: ActionStatus.PENDING,
+      scope: runActionDto.scope,
+      messages: runActionDto.messages,
+      actions: runActionDto.actions,
+      creditsUsed: this.CREDITS_PER_ACTION,
+    });
 
-  //     try {
-  //       // 3. Update status to running
-  //       await this.actionsRepository.updateActionStatus(
-  //         action._id.toString(),
-  //         ActionStatus.RUNNING,
-  //         { executedAt: new Date() },
-  //       );
+    try {
+      // 3. Update status to running
+      await this.actionsRepository.updateActionStatus(
+        action._id.toString(),
+        ActionStatus.RUNNING,
+        { executedAt: new Date() },
+      );
 
-  //       // 4. Collect context from documents
-  //       const context = await this.collectContext(userId, runActionDto.scope);
+      // 4. Collect context from documents
+      const context = await this.collectContext(userId, runActionDto.scope);
 
-  //       // 5. Process with mock processor
-  //       const outputs = this.mockProcessor.process(
-  //         context,
-  //         runActionDto.messages,
-  //         runActionDto.actions,
-  //       );
+      // 5. Process with mock processor
+      const outputs = this.mockProcessor.process(
+        context,
+        runActionDto.messages,
+        runActionDto.actions,
+      );
 
-  //       // 6. Save outputs as documents
-  //       const outputDocuments = await this.saveOutputs(
-  //         userId,
-  //         outputs,
-  //         action._id.toString(),
-  //       );
+      // 6. Save outputs as documents
+      const outputDocuments = await this.saveOutputs(
+        userId,
+        outputs,
+        action._id.toString(),
+      );
 
-  //       // 7. Update action with outputs
-  //       await this.actionsRepository.updateActionStatus(
-  //         action._id.toString(),
-  //         ActionStatus.COMPLETED,
-  //         {
-  //           outputs: outputDocuments.map((doc) => ({
-  //             type: doc.type,
-  //             documentId: doc.id,
-  //             filename: doc.filename,
-  //           })),
-  //           completedAt: new Date(),
-  //         },
-  //       );
+      // 7. Update action with outputs
+      await this.actionsRepository.updateActionStatus(
+        action._id.toString(),
+        ActionStatus.COMPLETED,
+        {
+          outputs: outputDocuments.map((doc) => ({
+            type: doc.type,
+            documentId: doc.id,
+            filename: doc.filename,
+          })),
+          completedAt: new Date(),
+        },
+      );
 
-  //       // 8. Track usage
-  //       await this.actionsRepository.createUsage({
-  //         userId,
-  //         actionType: runActionDto.actions.join(','),
-  //         credits: this.CREDITS_PER_ACTION,
-  //         scope: runActionDto.scope,
-  //         result: {
-  //           success: true,
-  //           outputDocumentIds: outputDocuments.map((d) => d.id),
-  //         },
-  //       });
+      // 8. Track usage
+      await this.actionsRepository.createUsage({
+        userId,
+        actionType: runActionDto.actions.join(','),
+        credits: this.CREDITS_PER_ACTION,
+        scope: runActionDto.scope,
+        result: {
+          success: true,
+          outputDocumentIds: outputDocuments.map((d) => d.id),
+        },
+      });
 
-  //       // 9. Log audit event
-  //       await this.auditService.logActionRun(userId, action._id.toString(), {
-  //         scope: runActionDto.scope,
-  //         actions: runActionDto.actions,
-  //         outputCount: outputDocuments.length,
-  //       });
+      // 9. Log audit event
+      await this.auditService.logActionRun(userId, action._id.toString(), {
+        scope: runActionDto.scope,
+        actions: runActionDto.actions,
+        outputCount: outputDocuments.length,
+      });
 
-  //       // 10. Return response
-  //       return this.toResponseDto(action, outputDocuments);
-  //     } catch (error) {
-  //       // Handle failure
-  //       await this.actionsRepository.updateActionStatus(
-  //         action._id.toString(),
-  //         ActionStatus.FAILED,
-  //         {
-  //           error: error.message,
-  //           completedAt: new Date(),
-  //         },
-  //       );
+      // 10. Return response
+      return this.toResponseDto(action, outputDocuments);
+    } catch (error) {
+      // Handle failure
+      await this.actionsRepository.updateActionStatus(
+        action._id.toString(),
+        ActionStatus.FAILED,
+        {
+          error: error.message,
+          completedAt: new Date(),
+        },
+      );
 
-  //       await this.actionsRepository.createUsage({
-  //         userId,
-  //         actionType: runActionDto.actions.join(','),
-  //         credits: this.CREDITS_PER_ACTION,
-  //         scope: runActionDto.scope,
-  //         result: {
-  //           success: false,
-  //           error: error.message,
-  //         },
-  //       });
+      await this.actionsRepository.createUsage({
+        userId,
+        actionType: runActionDto.actions.join(','),
+        credits: this.CREDITS_PER_ACTION,
+        scope: runActionDto.scope,
+        result: {
+          success: false,
+          error: error.message,
+        },
+      });
 
-  //       throw error;
-  //     }
-  //   }
+      throw error;
+    }
+  }
 
   /**
    * Get action by ID

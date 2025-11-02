@@ -68,10 +68,14 @@ export class DocumentsRepository {
     return { documents, total };
   }
 
-  async findByIds(ids: string[], ownerId: string): Promise<DocumentDocument[]> {
+  async findByIds(ids: any[], ownerId: string): Promise<DocumentDocument[]> {
+    const cleanedIds = ids
+      .map((str) => str.match(/ObjectId\('([a-f0-9]+)'\)/)?.[1])
+      .filter(Boolean);
+
     return this.documentModel
       .find({
-        _id: { $in: ids.map((id) => new Types.ObjectId(id)) },
+        _id: { $in: cleanedIds.map((id) => new Types.ObjectId(id)) },
         ownerId: new Types.ObjectId(ownerId),
       })
       .exec();

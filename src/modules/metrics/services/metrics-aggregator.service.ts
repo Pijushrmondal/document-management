@@ -12,7 +12,11 @@ import {
   DocumentModel,
 } from 'src/database/schemas/document.schema';
 import { Tag, TagDocument } from 'src/database/schemas/tag.schema';
-import { Task, TaskDocument } from 'src/database/schemas/task.schema';
+import {
+  Task,
+  TaskDocument,
+  TaskStatus,
+} from 'src/database/schemas/task.schema';
 import { Usage, UsageDocument } from 'src/database/schemas/usage.schema';
 import { User, UserDocument } from 'src/database/schemas/user.schema';
 import {
@@ -247,30 +251,30 @@ export class MetricsAggregatorService {
   /**
    * Get actions by month
    */
-  // async getActionsByMonth(userId?: string): Promise
-  //   Array<{ month: string; count: number; credits: number }>
-  // > {
-  //   const filter = userId ? { userId } : {};
+  async getActionsByMonth(
+    userId?: string,
+  ): Promise<Array<{ month: string; count: number; credits: number }>> {
+    const filter = userId ? { userId } : {};
 
-  //   const result = await this.usageModel.aggregate([
-  //     { $match: filter },
-  //     {
-  //       $group: {
-  //         _id: '$month',
-  //         count: { $sum: 1 },
-  //         credits: { $sum: '$credits' },
-  //       },
-  //     },
-  //     { $sort: { _id: -1 } },
-  //     { $limit: 12 },
-  //   ]);
+    const result = await this.usageModel.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$month',
+          count: { $sum: 1 },
+          credits: { $sum: '$credits' },
+        },
+      },
+      { $sort: { _id: -1 } },
+      { $limit: 12 },
+    ]);
 
-  //   return result.map((item) => ({
-  //     month: item._id,
-  //     count: item.count,
-  //     credits: item.credits,
-  //   }));
-  // }
+    return result.map((item) => ({
+      month: item._id,
+      count: item.count,
+      credits: item.credits,
+    }));
+  }
 
   /**
    * Get action success rate
@@ -331,35 +335,35 @@ export class MetricsAggregatorService {
   /**
    * Get task completion rate
    */
-  // async getTaskCompletionRate(userId?: string): Promise<number> {
-  //   const filter = userId ? { userId } : {};
+  async getTaskCompletionRate(userId?: string): Promise<number> {
+    const filter = userId ? { userId } : {};
 
-  //   const [total, completed] = await Promise.all([
-  //     this.taskModel.countDocuments(filter).exec(),
-  //     this.taskModel
-  //       .countDocuments({ ...filter, status: TaskStatus.COMPLETED })
-  //       .exec(),
-  //   ]);
+    const [total, completed] = await Promise.all([
+      this.taskModel.countDocuments(filter).exec(),
+      this.taskModel
+        .countDocuments({ ...filter, status: TaskStatus.COMPLETED })
+        .exec(),
+    ]);
 
-  //   if (total === 0) return 0;
-  //   return Math.round((completed / total) * 100);
-  // }
+    if (total === 0) return 0;
+    return Math.round((completed / total) * 100);
+  }
 
   /**
    * Get overdue tasks count
    */
-  // async getOverdueTasks(userId?: string): Promise<number> {
-  //   const filter: any = {
-  //     status: { $in: [TaskStatus.PENDING, TaskStatus.IN_PROGRESS] },
-  //     dueDate: { $lt: new Date() },
-  //   };
+  async getOverdueTasks(userId?: string): Promise<number> {
+    const filter: any = {
+      status: { $in: [TaskStatus.PENDING, TaskStatus.IN_PROGRESS] },
+      dueDate: { $lt: new Date() },
+    };
 
-  //   if (userId) {
-  //     filter.userId = userId;
-  //   }
+    if (userId) {
+      filter.userId = userId;
+    }
 
-  //   return this.taskModel.countDocuments(filter).exec();
-  // }
+    return this.taskModel.countDocuments(filter).exec();
+  }
 
   /**
    * Get webhooks by classification
@@ -430,25 +434,25 @@ export class MetricsAggregatorService {
   /**
    * Get webhooks by source
    */
-  // async getWebhooksBySource(limit: number = 10): Promise
-  //   Array<{ source: string; count: number }>
-  // > {
-  //   const result = await this.webhookModel.aggregate([
-  //     {
-  //       $group: {
-  //         _id: '$source',
-  //         count: { $sum: 1 },
-  //       },
-  //     },
-  //     { $sort: { count: -1 } },
-  //     { $limit: limit },
-  //   ]);
+  async getWebhooksBySource(
+    limit: number = 10,
+  ): Promise<Array<{ source: string; count: number }>> {
+    const result = await this.webhookModel.aggregate([
+      {
+        $group: {
+          _id: '$source',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: limit },
+    ]);
 
-  //   return result.map((item) => ({
-  //     source: item._id,
-  //     count: item.count,
-  //   }));
-  // }
+    return result.map((item) => ({
+      source: item._id,
+      count: item.count,
+    }));
+  }
 
   /**
    * Get tasks created by webhooks
@@ -487,30 +491,29 @@ export class MetricsAggregatorService {
   /**
    * Get top folders by document count
    */
-  // async getTopFolders(userId?: string, limit: number = 10): Promise
-  //   Array<{ name: string; count: number }>
-  // > {
-  //   const filter = userId ? { ownerId: userId } : {};
+  async getTopFolders(
+    userId?: string,
+    limit: number = 10,
+  ): Promise<Array<{ name: string; count: number }>> {
+    const filter = userId ? { ownerId: userId } : {};
 
-  //   const tags = await this.tagModel.find(filter).exec();
-  //   const tagCounts = await Promise.all(
-  //     tags.map(async (tag) => {
-  //       const count = await this.documentModel
-  //         .countDocuments({
-  //           _id: {
-  //             $in: await this.documentModel
-  //               .find({ ownerId: tag.ownerId })
-  //               .distinct('_id'),
-  //           },
-  //         })
-  //         .exec();
+    const tags = await this.tagModel.find(filter).exec();
+    const tagCounts = await Promise.all(
+      tags.map(async (tag) => {
+        const count = await this.documentModel
+          .countDocuments({
+            _id: {
+              $in: await this.documentModel
+                .find({ ownerId: tag.ownerId })
+                .distinct('_id'),
+            },
+          })
+          .exec();
 
-  //       return { name: tag.name, count };
-  //     }),
-  //   );
+        return { name: tag.name, count };
+      }),
+    );
 
-  //   return tagCounts
-  //     .sort((a, b) => b.count - a.count)
-  //     .slice(0, limit);
-  // }
+    return tagCounts.sort((a, b) => b.count - a.count).slice(0, limit);
+  }
 }
