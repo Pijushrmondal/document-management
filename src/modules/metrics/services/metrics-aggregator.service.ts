@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Action } from 'rxjs/internal/scheduler/Action';
 import { ActionDocument } from 'src/database/schemas/action.schema';
 import {
@@ -43,7 +43,7 @@ export class MetricsAggregatorService {
    * Get total document count
    */
   async getTotalDocuments(userId?: string): Promise<number> {
-    const filter = userId ? { ownerId: userId } : {};
+    const filter = userId ? { ownerId: new Types.ObjectId(userId) } : {};
     return this.documentModel.countDocuments(filter).exec();
   }
 
@@ -60,7 +60,7 @@ export class MetricsAggregatorService {
     };
 
     if (userId) {
-      filter.ownerId = userId;
+      filter.ownerId = new Types.ObjectId(userId);
     }
 
     return this.documentModel.countDocuments(filter).exec();
@@ -70,7 +70,7 @@ export class MetricsAggregatorService {
    * Get total folders (primary tags)
    */
   async getTotalFolders(userId?: string): Promise<number> {
-    const filter = userId ? { ownerId: userId } : {};
+    const filter = userId ? { ownerId: new Types.ObjectId(userId) } : {};
     return this.tagModel.countDocuments(filter).exec();
   }
 
@@ -84,7 +84,7 @@ export class MetricsAggregatorService {
     const filter: any = { month };
 
     if (userId) {
-      filter.userId = userId;
+      filter.userId = new Types.ObjectId(userId);
     }
 
     return this.usageModel.countDocuments(filter).exec();
@@ -102,7 +102,7 @@ export class MetricsAggregatorService {
     };
 
     if (userId) {
-      filter.userId = userId;
+      filter.userId = new Types.ObjectId(userId);
     }
 
     return this.taskModel.countDocuments(filter).exec();
@@ -126,7 +126,7 @@ export class MetricsAggregatorService {
    * Get total storage in MB
    */
   async getTotalStorage(userId?: string): Promise<number> {
-    const filter = userId ? { ownerId: userId } : {};
+    const filter = userId ? { ownerId: new Types.ObjectId(userId) } : {};
 
     const result = await this.documentModel.aggregate([
       { $match: filter },
@@ -146,7 +146,7 @@ export class MetricsAggregatorService {
    * Get total audit logs
    */
   async getTotalAuditLogs(userId?: string): Promise<number> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
     return this.auditLogModel.countDocuments(filter).exec();
   }
 
@@ -154,7 +154,7 @@ export class MetricsAggregatorService {
    * Get documents by MIME type
    */
   async getDocumentsByType(userId?: string): Promise<Record<string, number>> {
-    const filter = userId ? { ownerId: userId } : {};
+    const filter = userId ? { ownerId: new Types.ObjectId(userId) } : {};
 
     const result = await this.documentModel.aggregate([
       { $match: filter },
@@ -181,7 +181,7 @@ export class MetricsAggregatorService {
   async getDocumentsByMonth(
     userId?: string,
   ): Promise<Array<{ month: string; count: number }>> {
-    const filter = userId ? { ownerId: userId } : {};
+    const filter = userId ? { ownerId: new Types.ObjectId(userId) } : {};
 
     const result = await this.documentModel.aggregate([
       { $match: filter },
@@ -208,7 +208,7 @@ export class MetricsAggregatorService {
    * Get total credits used
    */
   async getTotalCreditsUsed(userId?: string): Promise<number> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
 
     const result = await this.usageModel.aggregate([
       { $match: filter },
@@ -227,7 +227,7 @@ export class MetricsAggregatorService {
    * Get actions by type
    */
   async getActionsByType(userId?: string): Promise<Record<string, number>> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
 
     const result = await this.usageModel.aggregate([
       { $match: filter },
@@ -254,7 +254,7 @@ export class MetricsAggregatorService {
   async getActionsByMonth(
     userId?: string,
   ): Promise<Array<{ month: string; count: number; credits: number }>> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
 
     const result = await this.usageModel.aggregate([
       { $match: filter },
@@ -280,7 +280,7 @@ export class MetricsAggregatorService {
    * Get action success rate
    */
   async getActionSuccessRate(userId?: string): Promise<number> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
 
     const [total, successful] = await Promise.all([
       this.actionModel.countDocuments(filter).exec(),
@@ -303,7 +303,7 @@ export class MetricsAggregatorService {
     failed: number;
     cancelled: number;
   }> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
 
     const result = await this.taskModel.aggregate([
       { $match: filter },
@@ -336,7 +336,7 @@ export class MetricsAggregatorService {
    * Get task completion rate
    */
   async getTaskCompletionRate(userId?: string): Promise<number> {
-    const filter = userId ? { userId } : {};
+    const filter = userId ? { userId: new Types.ObjectId(userId) } : {};
 
     const [total, completed] = await Promise.all([
       this.taskModel.countDocuments(filter).exec(),
@@ -359,7 +359,7 @@ export class MetricsAggregatorService {
     };
 
     if (userId) {
-      filter.userId = userId;
+      filter.userId = new Types.ObjectId(userId);
     }
 
     return this.taskModel.countDocuments(filter).exec();
@@ -495,21 +495,34 @@ export class MetricsAggregatorService {
     userId?: string,
     limit: number = 10,
   ): Promise<Array<{ name: string; count: number }>> {
-    const filter = userId ? { ownerId: userId } : {};
+    const filter = userId ? { ownerId: new Types.ObjectId(userId) } : {};
 
     const tags = await this.tagModel.find(filter).exec();
     const tagCounts = await Promise.all(
       tags.map(async (tag) => {
-        const count = await this.documentModel
-          .countDocuments({
-            _id: {
-              $in: await this.documentModel
-                .find({ ownerId: tag.ownerId })
-                .distinct('_id'),
+        // Count documents that have this tag as primary tag
+        const documentTags = await this.documentModel
+          .aggregate([
+            {
+              $lookup: {
+                from: 'documenttags',
+                localField: '_id',
+                foreignField: 'documentId',
+                as: 'tags',
+              },
             },
-          })
+            {
+              $match: {
+                'tags.tagId': tag._id,
+                'tags.isPrimary': true,
+                ownerId: tag.ownerId,
+              },
+            },
+            { $count: 'total' },
+          ])
           .exec();
 
+        const count = documentTags[0]?.total || 0;
         return { name: tag.name, count };
       }),
     );

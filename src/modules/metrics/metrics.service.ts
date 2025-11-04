@@ -67,7 +67,7 @@ export class MetricsService {
       this.metricsAggregator.getTotalDocuments(userId),
       this.metricsAggregator.getDocumentsThisMonth(userId),
       this.metricsAggregator.getTotalFolders(userId),
-      this.metricsAggregator.getTotalCreditsUsed(userId), // Assuming 5 credits per action
+      this.metricsAggregator.getTotalCreditsUsed(userId),
       this.metricsAggregator.getActionsThisMonth(userId),
       this.metricsAggregator.getTotalCreditsUsed(userId),
       this.metricsAggregator.getTasksByStatus(userId),
