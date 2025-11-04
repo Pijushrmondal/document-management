@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TagsService } from './tags.service';
@@ -13,11 +14,17 @@ import { TagResponseDto } from './dto/tag-response.dto';
 import { FolderResponseDto } from './dto/folder-response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { DocumentsService } from '@/modules/documents/documents.service';
+import { DocumentListDto } from '@/modules/documents/dto/document-list.dto';
+import { DocumentResponseDto } from '@/modules/documents/dto/document-response.dto';
 
 @Controller('v1')
 @UseGuards(JwtAuthGuard)
 export class TagsController {
-  constructor(private readonly tagsService: TagsService) {}
+  constructor(
+    private readonly tagsService: TagsService,
+    private readonly documentsService: DocumentsService,
+  ) {}
 
   // ==================== Tag Endpoints ====================
 
@@ -66,16 +73,18 @@ export class TagsController {
   async getDocumentsByFolder(
     @Param('name') folderName: string,
     @CurrentUser('sub') userId: string,
-  ): Promise<{ folder: string; documentIds: string[]; total: number }> {
-    const documentIds = await this.tagsService.getDocumentsByFolder(
+    @Query() query: DocumentListDto,
+  ): Promise<{
+    documents: DocumentResponseDto[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    return this.documentsService.findDocumentsByFolder(
       folderName,
       userId,
+      query.page,
+      query.limit,
     );
-
-    return {
-      folder: folderName,
-      documentIds,
-      total: documentIds.length,
-    };
   }
 }

@@ -81,6 +81,43 @@ export class DocumentsRepository {
       .exec();
   }
 
+  async findByIdsWithPagination(
+    ids: string[],
+    ownerId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ documents: DocumentDocument[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const objectIds = ids
+      .map((id) => {
+        // Handle both plain string IDs and ObjectId string format
+        const match = id.match(/ObjectId\('([a-f0-9]+)'\)/);
+        return match ? match[1] : id;
+      })
+      .filter(Boolean)
+      .map((id) => new Types.ObjectId(id));
+
+    const [documents, total] = await Promise.all([
+      this.documentModel
+        .find({
+          _id: { $in: objectIds },
+          ownerId: new Types.ObjectId(ownerId),
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.documentModel
+        .countDocuments({
+          _id: { $in: objectIds },
+          ownerId: new Types.ObjectId(ownerId),
+        })
+        .exec(),
+    ]);
+
+    return { documents, total };
+  }
+
   async searchFullText(
     query: string,
     ownerId: string,
@@ -103,11 +140,15 @@ export class DocumentsRepository {
     documentIds: any[],
     ownerId: string,
   ): Promise<DocumentDocument[]> {
+    const cleanedIds = documentIds
+      .map((str) => str.match(/ObjectId\('([a-f0-9]+)'\)/)?.[1])
+      .filter(Boolean);
+
     return this.documentModel
       .find(
         {
           $text: { $search: query },
-          _id: { $in: documentIds.map(({ _id }) => new Types.ObjectId(_id)) },
+          _id: { $in: cleanedIds.map((id) => new Types.ObjectId(id)) },
           ownerId: new Types.ObjectId(ownerId),
         },
         { score: { $meta: 'textScore' } },

@@ -66,13 +66,36 @@ export class AuditRepository {
 
   async findByUserId(
     userId: string,
+    page: number = 1,
     limit: number = 50,
-  ): Promise<AuditLogDocument[]> {
-    return this.auditLogModel
-      .find({ userId: new Types.ObjectId(userId) })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .exec();
+    from?: string,
+    to?: string,
+  ): Promise<{ logs: AuditLogDocument[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const filter: any = { userId: new Types.ObjectId(userId) };
+
+    // Add date range filter if provided
+    if (from || to) {
+      filter.timestamp = {};
+      if (from) {
+        filter.timestamp.$gte = new Date(from);
+      }
+      if (to) {
+        filter.timestamp.$lte = new Date(to);
+      }
+    }
+
+    const [logs, total] = await Promise.all([
+      this.auditLogModel
+        .find(filter)
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.auditLogModel.countDocuments(filter).exec(),
+    ]);
+
+    return { logs, total };
   }
 
   async findByAction(
@@ -111,5 +134,9 @@ export class AuditRepository {
       .deleteMany({ timestamp: { $lt: date } })
       .exec();
     return result.deletedCount;
+  }
+
+  async findById(logId: string): Promise<AuditLogDocument | null> {
+    return this.auditLogModel.findById(logId).exec();
   }
 }

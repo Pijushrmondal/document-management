@@ -188,6 +188,10 @@ export class TagsService {
     await this.tagsRepository.removeTag(documentId, tagId);
   }
 
+  async removeAllDocumentTags(documentId: string): Promise<void> {
+    await this.tagsRepository.removeAllDocumentTags(documentId);
+  }
+
   // ==================== Folder Operations ====================
 
   async getFolders(userId: string): Promise<FolderResponseDto[]> {
@@ -218,7 +222,10 @@ export class TagsService {
       true,
     );
 
-    return documentTags.map((dt) => dt.documentId.toString());
+    // Filter out null documentIds (in case referenced documents were deleted)
+    return documentTags
+      .filter((dt) => dt.documentId != null)
+      .map((dt) => dt.documentId.toString());
   }
 
   // ==================== Helper Methods ====================

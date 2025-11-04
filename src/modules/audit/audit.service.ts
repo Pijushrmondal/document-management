@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditRepository } from './audit.repository';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 import { AuditQueryDto } from './dto/audit-query.dto';
@@ -158,26 +158,56 @@ export class AuditService {
     };
   }
 
-  /**
-   * Get user's audit trail
-   */
   async getUserAuditTrail(
     userId: string,
+    page: number = 1,
     limit: number = 50,
-  ): Promise<AuditResponseDto[]> {
-    const logs = await this.auditRepository.findByUserId(userId, limit);
-    return logs.map((log) => this.toResponseDto(log));
+    from?: string,
+    to?: string,
+  ): Promise<{
+    logs: AuditResponseDto[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const { logs, total } = await this.auditRepository.findByUserId(
+      userId,
+      page,
+      limit,
+      from,
+      to,
+    );
+
+    return {
+      logs: logs.map((log) => this.toResponseDto(log)),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  /**
-   * Get entity audit trail
-   */
   async getEntityAuditTrail(
     entityType: EntityType,
     entityId: string,
   ): Promise<AuditResponseDto[]> {
     const logs = await this.auditRepository.findByEntity(entityType, entityId);
     return logs.map((log) => this.toResponseDto(log));
+  }
+
+  async findById(logId: string, userId?: string): Promise<AuditResponseDto> {
+    const log = await this.auditRepository.findById(logId);
+
+    if (!log) {
+      throw new NotFoundException('Audit log not found');
+    }
+
+    // If userId is provided, ensure the user can only access their own logs
+    // (unless they're admin, which is handled by the controller)
+    if (userId && log.userId.toString() !== userId) {
+      throw new NotFoundException('Audit log not found');
+    }
+
+    return this.toResponseDto(log);
   }
 
   /**

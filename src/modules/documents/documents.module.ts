@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
@@ -14,7 +14,7 @@ import { TagsModule } from '@/modules/tags/tags.module';
     MongooseModule.forFeature([
       { name: DocumentModel.name, schema: DocumentSchema },
     ]),
-    TagsModule, // Import TagsModule to use TagsService
+    forwardRef(() => TagsModule),
   ],
   controllers: [DocumentsController],
   providers: [DocumentsService, DocumentsRepository],

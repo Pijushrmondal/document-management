@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TagsController } from './tags.controller';
 import { TagsService } from './tags.service';
@@ -8,6 +8,7 @@ import {
   DocumentTag,
   DocumentTagSchema,
 } from 'src/database/schemas/document-tag.schema';
+import { DocumentsModule } from '@/modules/documents/documents.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import {
       { name: Tag.name, schema: TagSchema },
       { name: DocumentTag.name, schema: DocumentTagSchema },
     ]),
+    forwardRef(() => DocumentsModule),
   ],
   controllers: [TagsController],
   providers: [TagsService, TagsRepository],

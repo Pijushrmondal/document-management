@@ -116,6 +116,53 @@ export class DocumentsService {
     };
   }
 
+  async findDocumentsByFolder(
+    folderName: string,
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
+    documents: DocumentResponseDto[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    // Get document IDs for this folder
+    const documentIds = await this.tagsService.getDocumentsByFolder(
+      folderName,
+      userId,
+    );
+
+    if (documentIds.length === 0) {
+      return {
+        documents: [],
+        total: 0,
+        page,
+        totalPages: 0,
+      };
+    }
+
+    // Get paginated documents
+    const { documents, total } =
+      await this.documentsRepository.findByIdsWithPagination(
+        documentIds,
+        userId,
+        page,
+        limit,
+      );
+
+    const documentsWithTags = await Promise.all(
+      documents.map((doc) => this.toResponseDtoWithTags(doc)),
+    );
+
+    return {
+      documents: documentsWithTags,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async searchDocuments(
     userId: string,
     searchDto: SearchDocumentDto,
@@ -163,6 +210,9 @@ export class DocumentsService {
     if (!document) {
       throw new NotFoundException('Document not found');
     }
+
+    // Delete all document-tag associations from database
+    await this.tagsService.removeAllDocumentTags(documentId);
 
     // Delete file from filesystem
     try {
