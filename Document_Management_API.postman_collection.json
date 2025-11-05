@@ -1,0 +1,1895 @@
+{
+	"info": {
+		"_postman_id": "document-management-api-v1",
+		"name": "Document Management API",
+		"description": "Complete API collection for Document Management System. Includes all endpoints for authentication, documents, tags, actions, tasks, audit logs, metrics, and webhooks.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "document-management-team"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set('access_token', jsonData.access_token);",
+									"    pm.environment.set('user_id', jsonData.user.id);",
+									"    console.log('Token saved:', jsonData.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"role\": \"user\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login to get access token. The token will be automatically saved to environment variable 'access_token' for use in subsequent requests.\n\n**Roles available:** user, support, moderator, admin"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for login and token management"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get Current User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/users/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"users",
+								"me"
+							]
+						},
+						"description": "Get information about the currently authenticated user"
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints"
+		},
+		{
+			"name": "Documents",
+			"item": [
+				{
+					"name": "Upload Document",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Document file to upload (max 10MB)"
+								},
+								{
+									"key": "primaryTag",
+									"value": "invoices",
+									"type": "text",
+									"description": "Main tag/category (required)"
+								},
+								{
+									"key": "secondaryTags[]",
+									"value": "2024",
+									"type": "text",
+									"description": "Additional tags (optional, can add multiple)"
+								},
+								{
+									"key": "secondaryTags[]",
+									"value": "january",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/docs",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"docs"
+							]
+						},
+						"description": "Upload a new document. The primaryTag automatically creates/assigns to a folder. Use secondaryTags for additional categorization."
+					},
+					"response": []
+				},
+				{
+					"name": "List Documents",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/docs?page=1&limit=20&userId={{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"docs"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Items per page"
+								},
+								{
+									"key": "userId",
+									"value": "{{user_id}}",
+									"description": "Admin only - Filter by user ID",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of documents. Regular users see only their own documents. Admins can filter by userId parameter."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Documents",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"invoice\",\n  \"tags\": [\"invoices\", \"2024\"],\n  \"folder\": \"invoices\",\n  \"mimeType\": \"application/pdf\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/docs/search",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"docs",
+								"search"
+							]
+						},
+						"description": "Search documents using keywords, tags, folder, or file type"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/docs/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"docs",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Document ID"
+								}
+							]
+						},
+						"description": "Get details of a specific document"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Document",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/docs/:id/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"docs",
+								":id",
+								"download"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Document ID"
+								}
+							]
+						},
+						"description": "Download the actual file content of a document"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Document",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/docs/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"docs",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Document ID"
+								}
+							]
+						},
+						"description": "Delete a document permanently. Warning: This action cannot be undone."
+					},
+					"response": []
+				}
+			],
+			"description": "Document management endpoints for uploading, searching, downloading, and deleting documents"
+		},
+		{
+			"name": "Tags & Folders",
+			"item": [
+				{
+					"name": "Create Tag",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"invoices\",\n  \"color\": \"#FF5733\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/tags",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tags"
+							]
+						},
+						"description": "Create a new tag. Creating a tag automatically creates a corresponding folder."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Tags",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tags",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tags"
+							]
+						},
+						"description": "Get all tags created by the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tag by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tags/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tags",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Tag ID"
+								}
+							]
+						},
+						"description": "Get details of a specific tag"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tag",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tags/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tags",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Tag ID"
+								}
+							]
+						},
+						"description": "Delete a tag. This won't delete documents but they'll lose the tag association."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Folders",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/folders?userId={{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"folders"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{user_id}}",
+									"description": "Admin only - Filter by user ID",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all folders (automatically created from primary tags)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Documents by Folder",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/folders/:name/docs?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"folders",
+								":name",
+								"docs"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							],
+							"variable": [
+								{
+									"key": "name",
+									"value": "invoices",
+									"description": "Folder name (same as primary tag)"
+								}
+							]
+						},
+						"description": "Get all documents in a specific folder with pagination"
+					},
+					"response": []
+				}
+			],
+			"description": "Tag and folder management endpoints"
+		},
+		{
+			"name": "Actions",
+			"item": [
+				{
+					"name": "Run Action",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"scope\": {\n    \"type\": \"folder\",\n    \"name\": \"invoices\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Extract all invoice numbers and amounts\"\n    }\n  ],\n  \"actions\": [\"extract\", \"summarize\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/actions/run",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"actions",
+								"run"
+							]
+						},
+						"description": "Execute an AI-powered action on a set of documents. Scope can be 'folder' or 'files' (use ids array for files)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Action by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/actions/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"actions",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Action ID"
+								}
+							]
+						},
+						"description": "Get details of a specific action execution"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Action History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/actions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"actions"
+							]
+						},
+						"description": "Get all actions executed by the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Monthly Usage",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/actions/usage/month?year=2024&month=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"actions",
+								"usage",
+								"month"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2024",
+									"description": "Year (defaults to current year)"
+								},
+								{
+									"key": "month",
+									"value": "1",
+									"description": "Month 1-12 (defaults to current month)"
+								}
+							]
+						},
+						"description": "Get action usage statistics for a specific month"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All-Time Usage",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/actions/usage/all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"actions",
+								"usage",
+								"all"
+							]
+						},
+						"description": "Get total usage statistics across all time"
+					},
+					"response": []
+				}
+			],
+			"description": "AI-powered actions for document processing and analysis"
+		},
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "Create Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"source\": \"document-123\",\n  \"type\": \"review\",\n  \"channel\": \"email\",\n  \"target\": \"reviewer@example.com\",\n  \"title\": \"Review Q4 Invoice\",\n  \"description\": \"Please review the Q4 invoice for accuracy\",\n  \"metadata\": {\n    \"documentId\": \"507f1f77bcf86cd799439011\",\n    \"priority\": \"high\"\n  },\n  \"dueDate\": \"2024-01-20T10:00:00.000Z\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/tasks",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks"
+							]
+						},
+						"description": "Create a new task related to documents or workflows"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tasks",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tasks?page=1&limit=20&status=pending",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Filter by status: pending, in_progress, completed, failed, cancelled",
+									"disabled": true
+								},
+								{
+									"key": "type",
+									"value": "",
+									"description": "Filter by task type",
+									"disabled": true
+								},
+								{
+									"key": "channel",
+									"value": "",
+									"description": "Filter by channel",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all tasks with filtering and pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Statistics",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								"stats"
+							]
+						},
+						"description": "Get summary statistics for your tasks"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Today's Tasks",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/today",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								"today"
+							]
+						},
+						"description": "Get all tasks due today"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Overdue Tasks",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/overdue",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								"overdue"
+							]
+						},
+						"description": "Get all tasks that are past their due date and not completed"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						},
+						"description": "Retrieve details of a specific task"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Title\",\n  \"description\": \"Updated description\",\n  \"dueDate\": \"2024-01-25T10:00:00.000Z\",\n  \"metadata\": {\n    \"priority\": \"urgent\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						},
+						"description": "Update task details"
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Task completed successfully\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/:id/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								":id",
+								"complete"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						},
+						"description": "Mark a task as completed"
+					},
+					"response": []
+				},
+				{
+					"name": "Fail Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Failed due to timeout\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/:id/fail",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								":id",
+								"fail"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						},
+						"description": "Mark a task as failed"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Cancelled by user\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/:id/cancel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								":id",
+								"cancel"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						},
+						"description": "Cancel a task"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Task",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/tasks/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"tasks",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Task ID"
+								}
+							]
+						},
+						"description": "Delete a task permanently"
+					},
+					"response": []
+				}
+			],
+			"description": "Task management endpoints for document-related workflows"
+		},
+		{
+			"name": "Audit Logs",
+			"item": [
+				{
+					"name": "Query Audit Logs (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/audit?userId=&action=&resource=&from=&to=&limit=50&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"audit"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Filter by user ID",
+									"disabled": true
+								},
+								{
+									"key": "action",
+									"value": "",
+									"description": "Filter by action type",
+									"disabled": true
+								},
+								{
+									"key": "resource",
+									"value": "",
+									"description": "Filter by resource type",
+									"disabled": true
+								},
+								{
+									"key": "from",
+									"value": "",
+									"description": "Start date (ISO format)",
+									"disabled": true
+								},
+								{
+									"key": "to",
+									"value": "",
+									"description": "End date (ISO format)",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Admin only - Query system-wide audit logs with advanced filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Audit Trail",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/audit/me?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"audit",
+								"me"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get audit logs for the current user only"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Audit Trail (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/audit/user/:userId?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"audit",
+								"user",
+								":userId"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "from",
+									"value": "",
+									"description": "Start date (ISO format)",
+									"disabled": true
+								},
+								{
+									"key": "to",
+									"value": "",
+									"description": "End date (ISO format)",
+									"disabled": true
+								}
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "User ID"
+								}
+							]
+						},
+						"description": "Admin/Support only - Get audit logs for a specific user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Audit Log by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/audit/:logId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"audit",
+								":logId"
+							],
+							"variable": [
+								{
+									"key": "logId",
+									"value": "",
+									"description": "Audit log ID"
+								}
+							]
+						},
+						"description": "Get details of a specific audit log entry"
+					},
+					"response": []
+				}
+			],
+			"description": "Audit log endpoints for tracking system actions"
+		},
+		{
+			"name": "Metrics",
+			"item": [
+				{
+					"name": "Get System Metrics (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics"
+							]
+						},
+						"description": "Admin/Support only - Get system-wide metrics and statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Metrics",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics",
+								"me"
+							]
+						},
+						"description": "Get metrics for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Document Metrics (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics/documents?userId=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Filter metrics for specific user",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Admin/Support only - Get document-related metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Action Metrics (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics/actions?userId=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics",
+								"actions"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Filter metrics for specific user",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Admin/Support only - Get action-related metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Metrics (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics/tasks?userId=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics",
+								"tasks"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Filter metrics for specific user",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Admin/Support only - Get task-related metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Webhook Metrics (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics/webhooks",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics",
+								"webhooks"
+							]
+						},
+						"description": "Admin only - Get webhook-related metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Detailed Metrics (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/metrics/detailed?userId=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"metrics",
+								"detailed"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "",
+									"description": "Filter metrics for specific user",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Admin only - Get comprehensive metrics combining all aspects"
+					},
+					"response": []
+				}
+			],
+			"description": "Metrics and analytics endpoints for system insights"
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Query Webhook Events (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/webhooks?type=&status=&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"webhooks"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "",
+									"description": "Filter by event type",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: success, failed, pending",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Admin/Support only - Query webhook events with filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Webhook Event by ID (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/webhooks/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"webhooks",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "",
+									"description": "Webhook event ID"
+								}
+							]
+						},
+						"description": "Admin/Support only - Get details of a specific webhook event"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Webhook Statistics (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/webhooks/stats/summary",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"webhooks",
+								"stats",
+								"summary"
+							]
+						},
+						"description": "Admin only - Get webhook statistics and summary"
+					},
+					"response": []
+				}
+			],
+			"description": "Webhook management endpoints for external system integration"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
