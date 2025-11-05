@@ -8,12 +8,14 @@ import {
   AuditLog,
   AuditLogSchema,
 } from 'src/database/schemas/audit-log.schema';
+import { User, UserSchema } from 'src/database/schemas/user.schema';
 
 @Global() // Make AuditService available globally
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: AuditLog.name, schema: AuditLogSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [AuditController],

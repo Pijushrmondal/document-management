@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { AuditRepository } from './audit.repository';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 import { AuditQueryDto } from './dto/audit-query.dto';
@@ -8,10 +10,14 @@ import {
   AuditLogDocument,
   EntityType,
 } from 'src/database/schemas/audit-log.schema';
+import { User, UserDocument } from 'src/database/schemas/user.schema';
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly auditRepository: AuditRepository) {}
+  constructor(
+    private readonly auditRepository: AuditRepository,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+  ) {}
 
   /**
    * Log an audit event
@@ -217,6 +223,30 @@ export class AuditService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
     return this.auditRepository.deleteOlderThan(cutoffDate);
+  }
+
+  /**
+   * Get audit statistics
+   */
+  async getStats(): Promise<{
+    today: number;
+    week: number;
+    total: number;
+    totalUsers: number;
+  }> {
+    const [today, week, total, totalUsers] = await Promise.all([
+      this.auditRepository.getTodayLogsCount(),
+      this.auditRepository.getWeekLogsCount(),
+      this.auditRepository.getTotalLogsCount(),
+      this.userModel.countDocuments().exec(),
+    ]);
+
+    return {
+      today,
+      week,
+      total,
+      totalUsers,
+    };
   }
 
   /**

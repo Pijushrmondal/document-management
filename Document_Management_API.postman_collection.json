@@ -1442,6 +1442,36 @@
 					"response": []
 				},
 				{
+					"name": "Get Audit Statistics (Admin/Support)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/audit/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"audit",
+								"stats"
+							]
+						},
+						"description": "Admin/Support only - Get audit statistics including today's logs, week's logs, total logs, and total user count"
+					},
+					"response": []
+				},
+				{
 					"name": "Get Audit Log by ID",
 					"request": {
 						"auth": {

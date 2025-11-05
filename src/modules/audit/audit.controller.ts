@@ -58,6 +58,20 @@ export class AuditController {
     );
   }
 
+  /**
+   * Get audit statistics
+   */
+  @Get('stats')
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT)
+  async getStats(): Promise<{
+    today: number;
+    week: number;
+    total: number;
+    totalUsers: number;
+  }> {
+    return this.auditService.getStats();
+  }
+
   @Get(':logId')
   async getAuditLogById(
     @Param('logId') logId: string,

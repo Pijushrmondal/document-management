@@ -1112,6 +1112,35 @@ Get audit logs for the current user only.
 }
 ```
 
+#### Get Audit Statistics
+
+Get audit log statistics including today's logs, week's logs, total logs, and total user count.
+
+**Endpoint:** `GET /v1/audit/stats`
+
+**Authentication:** Required (Admin or Support role)
+
+**Success Response (200):**
+```json
+{
+  "today": 45,
+  "week": 312,
+  "total": 15234,
+  "totalUsers": 150
+}
+```
+
+**Response Fields:**
+- `today` (number) - Number of audit logs created today
+- `week` (number) - Number of audit logs in the last 7 days
+- `total` (number) - Total number of audit logs in the system
+- `totalUsers` (number) - Total number of users in the system
+
+**Tips:**
+- This endpoint provides a quick overview of system activity
+- Use it for dashboard displays and monitoring
+- The week count includes the last 7 days up to now
+
 #### Get Audit Log by ID
 
 Get details of a specific audit log entry.

@@ -139,4 +139,42 @@ export class AuditRepository {
   async findById(logId: string): Promise<AuditLogDocument | null> {
     return this.auditLogModel.findById(logId).exec();
   }
+
+  /**
+   * Get statistics methods
+   */
+  async getTotalLogsCount(): Promise<number> {
+    return this.auditLogModel.countDocuments().exec();
+  }
+
+  async getTodayLogsCount(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return this.auditLogModel
+      .countDocuments({
+        timestamp: {
+          $gte: today,
+          $lt: tomorrow,
+        },
+      })
+      .exec();
+  }
+
+  async getWeekLogsCount(): Promise<number> {
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    return this.auditLogModel
+      .countDocuments({
+        timestamp: {
+          $gte: weekAgo,
+          $lte: now,
+        },
+      })
+      .exec();
+  }
 }
