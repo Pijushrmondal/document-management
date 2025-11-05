@@ -50,6 +50,13 @@ export class TagsRepository {
       .exec();
   }
 
+  /**
+   * Find all tags (for admin and read-only roles)
+   */
+  async findAllTags(): Promise<TagDocument[]> {
+    return this.tagModel.find().sort({ name: 1 }).exec();
+  }
+
   async findOrCreateTag(name: string, ownerId: string): Promise<TagDocument> {
     let tag = await this.findTagByName(name, ownerId);
 

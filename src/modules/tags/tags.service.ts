@@ -4,11 +4,14 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { TagsRepository } from './tags.repository';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { TagResponseDto } from './dto/tag-response.dto';
 import { FolderResponseDto } from './dto/folder-response.dto';
+import { Permissions } from '@/common/utils/permissions.util';
+import { UserRole } from '@/common/enum/user-role.enum';
 
 @Injectable()
 export class TagsService {
@@ -36,15 +39,25 @@ export class TagsService {
     return this.toResponseDto(tag);
   }
 
-  async findTagById(tagId: string, userId: string): Promise<TagResponseDto> {
+  async findTagById(
+    tagId: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<TagResponseDto> {
     const tag = await this.tagsRepository.findTagById(tagId);
 
     if (!tag) {
       throw new NotFoundException('Tag not found');
     }
 
-    // Ensure user owns this tag
-    if (tag.ownerId.toString() !== userId) {
+    // Check permission to access resource
+    if (
+      !Permissions.canAccessResource(
+        userRole,
+        tag.ownerId.toString(),
+        userId,
+      )
+    ) {
       throw new NotFoundException('Tag not found');
     }
 
@@ -61,15 +74,26 @@ export class TagsService {
     return this.toResponseDto(tag);
   }
 
-  async deleteTag(tagId: string, userId: string): Promise<void> {
+  async deleteTag(
+    tagId: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
     const tag = await this.tagsRepository.findTagById(tagId);
 
     if (!tag) {
       throw new NotFoundException('Tag not found');
     }
 
-    if (tag.ownerId.toString() !== userId) {
-      throw new NotFoundException('Tag not found');
+    // Check permission to modify resource
+    if (
+      !Permissions.canModifyResource(
+        userRole,
+        tag.ownerId.toString(),
+        userId,
+      )
+    ) {
+      throw new ForbiddenException('Permission denied');
     }
 
     // Check if tag is being used
@@ -194,9 +218,32 @@ export class TagsService {
 
   // ==================== Folder Operations ====================
 
-  async getFolders(userId: string): Promise<FolderResponseDto[]> {
-    const foldersWithCounts =
-      await this.tagsRepository.getFoldersWithCounts(userId);
+  async getFolders(
+    userId: string,
+    userRole: UserRole,
+    targetUserId?: string, // For admin to query specific user's folders
+  ): Promise<FolderResponseDto[]> {
+    let queryUserId: string | undefined;
+
+    if (Permissions.hasFullAccess(userRole)) {
+      // Admin can query folders for any user
+      queryUserId = targetUserId || undefined;
+    } else if (Permissions.isReadOnly(userRole)) {
+      // Support/Moderator can view all folders (read-only)
+      // Ignore targetUserId param (they can't query specific users)
+      queryUserId = undefined;
+    } else {
+      // Regular users can only see their own folders
+      queryUserId = userId;
+    }
+
+    // If queryUserId is undefined, we need to get all folders
+    // For now, we'll need to update the repository to support this
+    // For simplicity, support/moderator will see all folders from repository
+    const foldersWithCounts = queryUserId
+      ? await this.tagsRepository.getFoldersWithCounts(queryUserId)
+      : await this.getAllFoldersForReadOnly();
+
     return foldersWithCounts.map(({ tag, documentCount }) => ({
       id: tag._id.toString(),
       name: tag.name,
@@ -205,14 +252,55 @@ export class TagsService {
     }));
   }
 
+  /**
+   * Get all folders for read-only roles (support/moderator)
+   */
+  private async getAllFoldersForReadOnly(): Promise<
+    Array<{ tag: TagDocument; documentCount: number }>
+  > {
+    // Get all tags (folders) - support/moderator can view all
+    const allTags = await this.tagsRepository.findAllTags();
+    
+    // Get document counts for each tag
+    const foldersWithCounts = await Promise.all(
+      allTags.map(async (tag) => {
+        const documentCount = await this.tagsRepository.countDocumentsByTag(
+          tag._id.toString(),
+        );
+        return {
+          tag,
+          documentCount,
+        };
+      }),
+    );
+
+    // Filter to only show folders with documents
+    return foldersWithCounts.filter((folder) => folder.documentCount > 0);
+  }
+
   async getDocumentsByFolder(
     folderName: string,
     userId: string,
+    userRole: UserRole,
   ): Promise<string[]> {
     // Find the tag
     const tag = await this.tagsRepository.findTagByName(folderName, userId);
 
     if (!tag) {
+      // If not found for user, admin might be querying a different user's folder
+      // For now, we'll only support user's own folders
+      // In a full implementation, admin would need to specify userId
+      throw new NotFoundException(`Folder '${folderName}' not found`);
+    }
+
+    // Check permission to access resource
+    if (
+      !Permissions.canAccessResource(
+        userRole,
+        tag.ownerId.toString(),
+        userId,
+      )
+    ) {
       throw new NotFoundException(`Folder '${folderName}' not found`);
     }
 

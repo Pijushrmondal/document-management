@@ -11,8 +11,9 @@ import { ActionsService } from './actions.service';
 import { RunActionDto } from './dto/run-action.dto';
 import { ActionResponseDto } from './dto/action-response.dto';
 import { UsageStatsDto } from './dto/usage-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard, ReadOnlyGuard } from '../../common/guards';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '@/common/interface/jwt-payload.interface';
 
 @Controller('v1/actions')
 @UseGuards(JwtAuthGuard)
@@ -20,11 +21,12 @@ export class ActionsController {
   constructor(private readonly actionsService: ActionsService) {}
 
   @Post('run')
+  @UseGuards(ReadOnlyGuard)
   async runAction(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() runActionDto: RunActionDto,
   ): Promise<ActionResponseDto> {
-    return this.actionsService.runAction(userId, runActionDto);
+    return this.actionsService.runAction(user.sub, user.role, runActionDto);
   }
 
   /**

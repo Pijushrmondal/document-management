@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DocumentsRepository } from './documents.repository';
 
@@ -13,6 +14,8 @@ import { extractTextFromFile } from '@/common/utils/file-upload.util';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { DocumentResponseDto } from './dto/document-response.dto';
 import { SearchDocumentDto, SearchScope } from './dto/search-document.dto';
+import { Permissions } from '@/common/utils/permissions.util';
+import { UserRole } from '@/common/enum/user-role.enum';
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -22,6 +25,7 @@ export class DocumentsService {
 
   async uploadDocument(
     userId: string,
+    userRole: UserRole,
     file: Express.Multer.File,
     uploadDto: UploadDocumentDto,
   ): Promise<DocumentResponseDto> {
@@ -67,7 +71,7 @@ export class DocumentsService {
       );
     } catch (error) {
       // If tag assignment fails, delete the uploaded file and document
-      await this.deleteDocument(document._id.toString(), userId);
+      await this.deleteDocument(document._id.toString(), userId, userRole);
       throw error;
     }
   }
@@ -75,14 +79,35 @@ export class DocumentsService {
   async findById(
     documentId: string,
     userId: string,
+    userRole: UserRole,
   ): Promise<DocumentResponseDto> {
-    const document = await this.documentsRepository.findByIdAndOwner(
-      documentId,
-      userId,
-    );
+    let document: DocumentDocument | null;
+
+    // Admin and support/moderator can access any document
+    if (Permissions.hasFullAccess(userRole) || Permissions.isReadOnly(userRole)) {
+      document = await this.documentsRepository.findByIdForAdmin(documentId);
+    } else {
+      document = await this.documentsRepository.findByIdAndOwner(
+        documentId,
+        userId,
+      );
+    }
 
     if (!document) {
       throw new NotFoundException('Document not found');
+    }
+
+    // Check permission to access resource
+    // Support/moderator can view all, so skip check for them
+    if (
+      !Permissions.isReadOnly(userRole) &&
+      !Permissions.canAccessResource(
+        userRole,
+        document.ownerId.toString(),
+        userId,
+      )
+    ) {
+      throw new ForbiddenException('Access denied');
     }
 
     return this.toResponseDtoWithTags(document);
@@ -90,19 +115,49 @@ export class DocumentsService {
 
   async findAll(
     userId: string,
+    userRole: UserRole,
     page: number = 1,
     limit: number = 20,
+    targetUserId?: string, // For admin to query specific user's documents
   ): Promise<{
     documents: DocumentResponseDto[];
     total: number;
     page: number;
     totalPages: number;
   }> {
-    const { documents, total } = await this.documentsRepository.findByOwner(
-      userId,
-      page,
-      limit,
-    );
+    let documents: DocumentDocument[];
+    let total: number;
+
+    // Admin can query all documents or filter by user
+    if (Permissions.hasFullAccess(userRole)) {
+      const queryUserId = targetUserId || undefined;
+      const result = await this.documentsRepository.findAll(
+        queryUserId,
+        page,
+        limit,
+      );
+      documents = result.documents;
+      total = result.total;
+    } else if (Permissions.isReadOnly(userRole)) {
+      // Support/Moderator can view all documents (read-only)
+      // Ignore targetUserId param (they can't query specific users)
+      const result = await this.documentsRepository.findAll(
+        undefined,
+        page,
+        limit,
+      );
+      documents = result.documents;
+      total = result.total;
+    } else {
+      // Regular users can only see their own documents
+      const result = await this.documentsRepository.findByOwner(
+        userId,
+        page,
+        limit,
+      );
+      documents = result.documents;
+      total = result.total;
+    }
 
     const documentsWithTags = await Promise.all(
       documents.map((doc) => this.toResponseDtoWithTags(doc)),
@@ -119,6 +174,7 @@ export class DocumentsService {
   async findDocumentsByFolder(
     folderName: string,
     userId: string,
+    userRole: UserRole,
     page: number = 1,
     limit: number = 20,
   ): Promise<{
@@ -131,6 +187,7 @@ export class DocumentsService {
     const documentIds = await this.tagsService.getDocumentsByFolder(
       folderName,
       userId,
+      userRole,
     );
 
     if (documentIds.length === 0) {
@@ -143,6 +200,8 @@ export class DocumentsService {
     }
 
     // Get paginated documents
+    // Note: For admin, we still need to filter by owner in repository
+    // This is a limitation - we'd need to update repository method
     const { documents, total } =
       await this.documentsRepository.findByIdsWithPagination(
         documentIds,
@@ -165,6 +224,7 @@ export class DocumentsService {
 
   async searchDocuments(
     userId: string,
+    userRole: UserRole,
     searchDto: SearchDocumentDto,
   ): Promise<DocumentResponseDto[]> {
     // Validate scope rule: must be EITHER folder OR files, not both
@@ -178,37 +238,78 @@ export class DocumentsService {
       const documentIds = await this.tagsService.getDocumentsByFolder(
         folderName,
         userId,
+        userRole,
       );
 
       if (documentIds.length === 0) {
         return [];
       }
 
-      documents = await this.documentsRepository.searchFullTextInDocuments(
-        searchDto.q,
-        documentIds,
-        userId,
-      );
+      // Admin and support/moderator can search without owner filter
+      if (Permissions.hasFullAccess(userRole) || Permissions.isReadOnly(userRole)) {
+        documents =
+          await this.documentsRepository.searchFullTextInDocumentsForAdmin(
+            searchDto.q,
+            documentIds,
+          );
+      } else {
+        documents = await this.documentsRepository.searchFullTextInDocuments(
+          searchDto.q,
+          documentIds,
+          userId,
+        );
+      }
     } else {
       // Search within specific files
-      documents = await this.documentsRepository.searchFullTextInDocuments(
-        searchDto.q,
-        searchDto.ids,
-        userId,
-      );
+      // Admin and support/moderator can search without owner filter
+      if (Permissions.hasFullAccess(userRole) || Permissions.isReadOnly(userRole)) {
+        documents =
+          await this.documentsRepository.searchFullTextInDocumentsForAdmin(
+            searchDto.q,
+            searchDto.ids,
+          );
+      } else {
+        documents = await this.documentsRepository.searchFullTextInDocuments(
+          searchDto.q,
+          searchDto.ids,
+          userId,
+        );
+      }
     }
 
     return Promise.all(documents.map((doc) => this.toResponseDtoWithTags(doc)));
   }
 
-  async deleteDocument(documentId: string, userId: string): Promise<void> {
-    const document = await this.documentsRepository.findByIdAndOwner(
-      documentId,
-      userId,
-    );
+  async deleteDocument(
+    documentId: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    let document: DocumentDocument | null;
+
+    // Admin can access any document
+    if (Permissions.hasFullAccess(userRole)) {
+      document = await this.documentsRepository.findByIdForAdmin(documentId);
+    } else {
+      document = await this.documentsRepository.findByIdAndOwner(
+        documentId,
+        userId,
+      );
+    }
 
     if (!document) {
       throw new NotFoundException('Document not found');
+    }
+
+    // Check permission to modify resource
+    if (
+      !Permissions.canModifyResource(
+        userRole,
+        document.ownerId.toString(),
+        userId,
+      )
+    ) {
+      throw new ForbiddenException('Permission denied');
     }
 
     // Delete all document-tag associations from database
@@ -230,14 +331,35 @@ export class DocumentsService {
   async downloadDocument(
     documentId: string,
     userId: string,
+    userRole: UserRole,
   ): Promise<{ filePath: string; filename: string; mimeType: string }> {
-    const document = await this.documentsRepository.findByIdAndOwner(
-      documentId,
-      userId,
-    );
+    let document: DocumentDocument | null;
+
+    // Admin and support/moderator can access any document
+    if (Permissions.hasFullAccess(userRole) || Permissions.isReadOnly(userRole)) {
+      document = await this.documentsRepository.findByIdForAdmin(documentId);
+    } else {
+      document = await this.documentsRepository.findByIdAndOwner(
+        documentId,
+        userId,
+      );
+    }
 
     if (!document) {
       throw new NotFoundException('Document not found');
+    }
+
+    // Check permission to access resource
+    // Support/moderator can view all, so skip check for them
+    if (
+      !Permissions.isReadOnly(userRole) &&
+      !Permissions.canAccessResource(
+        userRole,
+        document.ownerId.toString(),
+        userId,
+      )
+    ) {
+      throw new ForbiddenException('Access denied');
     }
 
     if (!fs.existsSync(document.filePath)) {

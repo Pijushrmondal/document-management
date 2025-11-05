@@ -11,6 +11,7 @@ import { MockProcessor } from './processors/mock-processor';
 import { RunActionDto } from './dto/run-action.dto';
 import { ActionResponseDto, ActionOutputDto } from './dto/action-response.dto';
 import { UsageStatsDto } from './dto/usage-response.dto';
+import { UserRole } from '@/common/enum/user-role.enum';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -36,6 +37,7 @@ export class ActionsService {
    */
   async runAction(
     userId: string,
+    userRole: UserRole,
     runActionDto: RunActionDto,
   ): Promise<ActionResponseDto> {
     // 1. Validate scope (folder XOR files)
@@ -60,7 +62,11 @@ export class ActionsService {
       );
 
       // 4. Collect context from documents
-      const context = await this.collectContext(userId, runActionDto.scope);
+      const context = await this.collectContext(
+        userId,
+        userRole,
+        runActionDto.scope,
+      );
 
       // 5. Process with mock processor
       const outputs = this.mockProcessor.process(
@@ -243,7 +249,11 @@ export class ActionsService {
   /**
    * Collect document context for processing
    */
-  private async collectContext(userId: string, scope: any): Promise<any> {
+  private async collectContext(
+    userId: string,
+    userRole: UserRole,
+    scope: any,
+  ): Promise<any> {
     let documentIds: string[];
 
     if (scope.type === 'folder') {
@@ -251,6 +261,7 @@ export class ActionsService {
       documentIds = await this.tagsService.getDocumentsByFolder(
         scope.name,
         userId,
+        userRole,
       );
 
       if (documentIds.length === 0) {

@@ -14,7 +14,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard, ReadOnlyGuard } from '../../common/guards';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('v1/tasks')
@@ -26,6 +26,7 @@ export class TasksController {
    * Create a new task
    */
   @Post()
+  @UseGuards(ReadOnlyGuard)
   async createTask(
     @CurrentUser('sub') userId: string,
     @Body() createTaskDto: CreateTaskDto,
@@ -98,6 +99,7 @@ export class TasksController {
    * Update task
    */
   @Patch(':id')
+  @UseGuards(ReadOnlyGuard)
   async updateTask(
     @Param('id') taskId: string,
     @CurrentUser('sub') userId: string,
@@ -110,6 +112,7 @@ export class TasksController {
    * Mark task as completed
    */
   @Patch(':id/complete')
+  @UseGuards(ReadOnlyGuard)
   async completeTask(
     @Param('id') taskId: string,
     @CurrentUser('sub') userId: string,
@@ -122,6 +125,7 @@ export class TasksController {
    * Mark task as failed
    */
   @Patch(':id/fail')
+  @UseGuards(ReadOnlyGuard)
   async failTask(
     @Param('id') taskId: string,
     @CurrentUser('sub') userId: string,
@@ -134,6 +138,7 @@ export class TasksController {
    * Cancel task
    */
   @Patch(':id/cancel')
+  @UseGuards(ReadOnlyGuard)
   async cancelTask(
     @Param('id') taskId: string,
     @CurrentUser('sub') userId: string,
@@ -146,6 +151,7 @@ export class TasksController {
    * Delete task
    */
   @Delete(':id')
+  @UseGuards(ReadOnlyGuard)
   async deleteTask(
     @Param('id') taskId: string,
     @CurrentUser('sub') userId: string,

@@ -19,13 +19,14 @@ import { Response } from 'express';
 import { DocumentsService } from './documents.service';
 
 import * as fs from 'fs';
-import { JwtAuthGuard } from '@/common/guards';
+import { JwtAuthGuard, ReadOnlyGuard } from '@/common/guards';
 import { MAX_FILE_SIZE, multerConfig } from '@/common/utils/file-upload.util';
 import { CurrentUser } from '@/common/decorators';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { DocumentResponseDto } from './dto/document-response.dto';
 import { DocumentListDto } from './dto/document-list.dto';
 import { SearchDocumentDto } from './dto/search-document.dto';
+import { JwtPayload } from '@/common/interface/jwt-payload.interface';
 
 @Controller('v1/docs')
 @UseGuards(JwtAuthGuard)
@@ -33,9 +34,10 @@ export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
+  @UseGuards(ReadOnlyGuard)
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadDocument(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
     @UploadedFile(
       new ParseFilePipeBuilder()
         .addMaxSizeValidator({ maxSize: MAX_FILE_SIZE })
@@ -44,24 +46,41 @@ export class DocumentsController {
     file: Express.Multer.File,
     @Body() uploadDto: UploadDocumentDto,
   ): Promise<DocumentResponseDto> {
-    return this.documentsService.uploadDocument(userId, file, uploadDto);
+    return this.documentsService.uploadDocument(
+      user.sub,
+      user.role,
+      file,
+      uploadDto,
+    );
   }
 
   @Get()
   async listDocuments(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query() query: DocumentListDto,
+    @Query('userId') targetUserId?: string, // For admin to query specific user
   ) {
-    return this.documentsService.findAll(userId, query.page, query.limit);
+    // Support/Moderator cannot use userId param - ignore it
+    const isReadOnly = user.role === 'support' || user.role === 'moderator';
+    const finalUserId = isReadOnly ? undefined : targetUserId;
+
+    return this.documentsService.findAll(
+      user.sub,
+      user.role,
+      query.page,
+      query.limit,
+      finalUserId,
+    );
   }
 
   @Post('search')
   async searchDocuments(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() searchDto: SearchDocumentDto,
   ): Promise<{ results: DocumentResponseDto[]; total: number }> {
     const results = await this.documentsService.searchDocuments(
-      userId,
+      user.sub,
+      user.role,
       searchDto,
     );
 
@@ -74,19 +93,23 @@ export class DocumentsController {
   @Get(':id')
   async getDocument(
     @Param('id') documentId: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<DocumentResponseDto> {
-    return this.documentsService.findById(documentId, userId);
+    return this.documentsService.findById(documentId, user.sub, user.role);
   }
 
   @Get(':id/download')
   async downloadDocument(
     @Param('id') documentId: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const { filePath, filename, mimeType } =
-      await this.documentsService.downloadDocument(documentId, userId);
+      await this.documentsService.downloadDocument(
+        documentId,
+        user.sub,
+        user.role,
+      );
 
     const file = fs.createReadStream(filePath);
 
@@ -99,11 +122,16 @@ export class DocumentsController {
   }
 
   @Delete(':id')
+  @UseGuards(ReadOnlyGuard)
   async deleteDocument(
     @Param('id') documentId: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<{ message: string }> {
-    await this.documentsService.deleteDocument(documentId, userId);
+    await this.documentsService.deleteDocument(
+      documentId,
+      user.sub,
+      user.role,
+    );
     return { message: 'Document deleted successfully' };
   }
 }

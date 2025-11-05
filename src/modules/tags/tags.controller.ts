@@ -12,11 +12,12 @@ import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { TagResponseDto } from './dto/tag-response.dto';
 import { FolderResponseDto } from './dto/folder-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard, ReadOnlyGuard } from '../../common/guards';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { DocumentsService } from '@/modules/documents/documents.service';
 import { DocumentListDto } from '@/modules/documents/dto/document-list.dto';
 import { DocumentResponseDto } from '@/modules/documents/dto/document-response.dto';
+import { JwtPayload } from '@/common/interface/jwt-payload.interface';
 
 @Controller('v1')
 @UseGuards(JwtAuthGuard)
@@ -29,6 +30,7 @@ export class TagsController {
   // ==================== Tag Endpoints ====================
 
   @Post('tags')
+  @UseGuards(ReadOnlyGuard)
   async createTag(
     @CurrentUser('sub') userId: string,
     @Body() createTagDto: CreateTagDto,
@@ -46,17 +48,18 @@ export class TagsController {
   @Get('tags/:id')
   async getTag(
     @Param('id') tagId: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<TagResponseDto> {
-    return this.tagsService.findTagById(tagId, userId);
+    return this.tagsService.findTagById(tagId, user.sub, user.role);
   }
 
   @Delete('tags/:id')
+  @UseGuards(ReadOnlyGuard)
   async deleteTag(
     @Param('id') tagId: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<{ message: string }> {
-    await this.tagsService.deleteTag(tagId, userId);
+    await this.tagsService.deleteTag(tagId, user.sub, user.role);
     return { message: 'Tag deleted successfully' };
   }
 
@@ -64,15 +67,20 @@ export class TagsController {
 
   @Get('folders')
   async getFolders(
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
+    @Query('userId') targetUserId?: string, // For admin to query specific user
   ): Promise<FolderResponseDto[]> {
-    return this.tagsService.getFolders(userId);
+    // Support/Moderator cannot use userId param - ignore it
+    const isReadOnly = user.role === 'support' || user.role === 'moderator';
+    const finalUserId = isReadOnly ? undefined : targetUserId;
+
+    return this.tagsService.getFolders(user.sub, user.role, finalUserId);
   }
 
   @Get('folders/:name/docs')
   async getDocumentsByFolder(
     @Param('name') folderName: string,
-    @CurrentUser('sub') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query() query: DocumentListDto,
   ): Promise<{
     documents: DocumentResponseDto[];
@@ -82,7 +90,8 @@ export class TagsController {
   }> {
     return this.documentsService.findDocumentsByFolder(
       folderName,
-      userId,
+      user.sub,
+      user.role,
       query.page,
       query.limit,
     );

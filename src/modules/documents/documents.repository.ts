@@ -46,6 +46,13 @@ export class DocumentsRepository {
       .exec();
   }
 
+  /**
+   * Find document by ID (for admin access - no owner filter)
+   */
+  async findByIdForAdmin(id: string): Promise<DocumentDocument | null> {
+    return this.documentModel.findById(id).exec();
+  }
+
   async findByOwner(
     ownerId: string,
     page: number = 1,
@@ -63,6 +70,30 @@ export class DocumentsRepository {
       this.documentModel
         .countDocuments({ ownerId: new Types.ObjectId(ownerId) })
         .exec(),
+    ]);
+
+    return { documents, total };
+  }
+
+  /**
+   * Find all documents (for admin access - optional ownerId filter)
+   */
+  async findAll(
+    ownerId?: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ documents: DocumentDocument[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const filter = ownerId ? { ownerId: new Types.ObjectId(ownerId) } : {};
+
+    const [documents, total] = await Promise.all([
+      this.documentModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.documentModel.countDocuments(filter).exec(),
     ]);
 
     return { documents, total };
@@ -150,6 +181,29 @@ export class DocumentsRepository {
           $text: { $search: query },
           _id: { $in: cleanedIds.map((id) => new Types.ObjectId(id)) },
           ownerId: new Types.ObjectId(ownerId),
+        },
+        { score: { $meta: 'textScore' } },
+      )
+      .sort({ score: { $meta: 'textScore' } })
+      .exec();
+  }
+
+  /**
+   * Search full text in documents (for admin - no owner filter)
+   */
+  async searchFullTextInDocumentsForAdmin(
+    query: string,
+    documentIds: any[],
+  ): Promise<DocumentDocument[]> {
+    const cleanedIds = documentIds
+      .map((str) => str.match(/ObjectId\('([a-f0-9]+)'\)/)?.[1])
+      .filter(Boolean);
+
+    return this.documentModel
+      .find(
+        {
+          $text: { $search: query },
+          _id: { $in: cleanedIds.map((id) => new Types.ObjectId(id)) },
         },
         { score: { $meta: 'textScore' } },
       )

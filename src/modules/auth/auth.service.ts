@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { UserResponseDto } from '../users/dto/user-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +36,15 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     const expiresIn = this.configService.get<string>('JWT_EXPIRATION', '24h');
 
-    return new AuthResponseDto(accessToken, expiresIn);
+    // Return user object in response (recommended for frontend)
+    const userDto: UserResponseDto = new UserResponseDto({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+    });
+
+    return new AuthResponseDto(accessToken, expiresIn, userDto);
   }
 
   /**
